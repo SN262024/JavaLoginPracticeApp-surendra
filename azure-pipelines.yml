@@ -1,0 +1,89 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  VM_USER: "surendraadmin"
+  TOMCAT_PATH: "/opt/tomcat"
+
+# =========================
+# STAGE 1 : BUILD
+# =========================
+stages:
+- stage: Build
+  displayName: Build Java Application
+  jobs:
+  - job: BuildJob
+    displayName: Maven Build
+    steps:
+
+    # 1️⃣ Checkout code
+    - checkout: self
+
+    # 2️⃣ Java install
+    - task: JavaToolInstaller@0
+      inputs:
+        versionSpec: '17'
+        jdkArchitectureOption: 'x64'
+        jdkSourceOption: 'PreInstalled'
+
+    # 3️⃣ Maven install
+    - script: |
+        sudo apt update
+        sudo apt install -y maven
+      displayName: Install Maven
+
+    # 4️⃣ Build WAR
+    - script: |
+        mvn clean package
+      displayName: Maven Build
+
+    # 5️⃣ Publish WAR Artifact
+    - task: PublishBuildArtifacts@1
+      inputs:
+        pathToPublish: 'target'
+        artifactName: 'java-war'
+        publishLocation: 'Container'
+      displayName: Publish WAR Artifact
+
+
+# =========================
+# STAGE 2 : DEPLOY
+# =========================
+- stage: Deploy
+  displayName: Deploy to VM
+  dependsOn: Build
+  jobs:
+  - job: DeployJob
+    displayName: Deploy WAR to Tomcat
+    steps:
+
+    # 6️⃣ Download Artifact
+    - task: DownloadBuildArtifacts@0
+      inputs:
+        buildType: 'current'
+        artifactName: 'java-war'
+        downloadPath: '$(Pipeline.Workspace)'
+      displayName: Download WAR Artifact
+
+    # 7️⃣ Copy WAR to VM
+    - task: CopyFilesOverSSH@0
+      inputs:
+        sshEndpoint: 'vm-ssh-connection'
+        sourceFolder: '$(Pipeline.Workspace)/java-war'
+        contents: '*.war'
+        targetFolder: '/home/$(VM_USER)'
+      displayName: Copy WAR to VM
+
+    # 8️⃣ Deploy + Restart Tomcat
+    - task: SSH@0
+      inputs:
+        sshEndpoint: 'vm-ssh-connection'
+        runOptions: 'commands'
+        commands: |
+          sudo cp /home/$(VM_USER)/*.war $(TOMCAT_PATH)/webapps/JavaLoginShowcase.war
+          sudo $(TOMCAT_PATH)/bin/shutdown.sh || true
+          sudo $(TOMCAT_PATH)/bin/startup.sh
+      displayName: Restart Tomcat
