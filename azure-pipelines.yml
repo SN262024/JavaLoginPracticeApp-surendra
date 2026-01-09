@@ -2,103 +2,76 @@ trigger:
 - main
 
 pool:
-  name: Default  # Tumhara self-hosted agent pool
+  name: Default   # your self-hosted agent pool
 
 variables:
-  VM_USER: "surendraadmin"
   TOMCAT_PATH: "/opt/tomcat"
-  JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"  # Java 17 path on VM
-  
+  APP_NAME: "JavaLoginShowcase"
+
 stages:
+
+# =========================
+# STAGE 1 : BUILD
+# =========================
 - stage: Build
-  displayName: Build Java Application
+  displayName: Build Java App
   jobs:
   - job: BuildJob
     displayName: Maven Build
-    pool:
-      name: Default
     steps:
 
-    # 1️⃣ Checkout code
     - checkout: self
 
-    # 2️⃣ Install Java 17 if missing & set JAVA_HOME
+    # Install Java 17 properly
     - script: |
         sudo apt update
         sudo apt install -y openjdk-17-jdk
-        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-        export PATH=$JAVA_HOME/bin:$PATH
+        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" | sudo tee /etc/profile.d/java.sh
+        source /etc/profile.d/java.sh
         java -version
-        javac -version
-      displayName: Install Java 17 & Set JAVA_HOME
+      displayName: Install Java 17
 
-    # 3️⃣ Maven install
+    # Maven already installed but ensure JAVA_HOME
     - script: |
-        sudo apt install -y maven
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
         mvn -version
-      displayName: Install Maven
-
-    # 4️⃣ Build WAR
-    - script: |
         mvn clean package
       displayName: Maven Build
 
-    # 5️⃣ Publish WAR Artifact
+    # Publish WAR
     - task: PublishBuildArtifacts@1
       inputs:
         pathToPublish: 'target'
         artifactName: 'java-war'
         publishLocation: 'Container'
-      displayName: Publish WAR Artifact
 
 
 # =========================
 # STAGE 2 : DEPLOY
 # =========================
 - stage: Deploy
-  displayName: Deploy to VM
+  displayName: Deploy to Tomcat
   dependsOn: Build
   jobs:
   - job: DeployJob
-    displayName: Deploy WAR to Tomcat
+    displayName: Deploy WAR Locally
     steps:
 
-    # 🔹 0️⃣ SSH CONNECTION TEST (VERY IMPORTANT)
-    - task: SSH@0
-      displayName: Test SSH Connection
-      inputs:
-        sshEndpoint: 'vm-ssh-connection'
-        runOptions: 'inline'
-        inline: |
-          whoami
-          hostname
-          ls -la /home/surendraadmin
-
-
-    # 🔹 1️⃣ Download WAR artifact
     - task: DownloadBuildArtifacts@0
-      displayName: Download WAR Artifact
       inputs:
         buildType: 'current'
         artifactName: 'java-war'
         downloadPath: '$(Pipeline.Workspace)'
 
-    # 🔹 2️⃣ Copy WAR to VM
-    - task: CopyFilesOverSSH@0
-      displayName: Copy WAR to VM
-      inputs:
-        sshEndpoint: 'vm-ssh-connection'
-        sourceFolder: '$(Pipeline.Workspace)/java-war'
-        contents: '*.war'
-        targetFolder: '/home/surendraadmin'
+    - script: |
+        echo "Stopping Tomcat"
+        sudo $(TOMCAT_PATH)/bin/shutdown.sh || true
+        sleep 5
 
-    # 🔹 3️⃣ Deploy WAR + Restart Tomcat
-    - task: SSH@0
+        echo "Deploying WAR"
+        sudo cp $(Pipeline.Workspace)/java-war/*.war \
+          $(TOMCAT_PATH)/webapps/$(APP_NAME).war
+
+        echo "Starting Tomcat"
+        sudo $(TOMCAT_PATH)/bin/startup.sh
       displayName: Deploy & Restart Tomcat
-      inputs:
-        sshEndpoint: 'vm-ssh-connection'
-        runOptions: 'inline'
-        commands: |
-          sudo cp /home/surendraadmin/*.war /opt/tomcat/webapps/JavaLoginShowcase.war
-          sudo /opt/tomcat/bin/shutdown.sh || true
-          sudo /opt/tomcat/bin/startup.sh
