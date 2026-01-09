@@ -63,30 +63,41 @@ stages:
     displayName: Deploy WAR to Tomcat
     steps:
 
-    # 6️⃣ Download Artifact
+    # 🔹 0️⃣ SSH CONNECTION TEST (VERY IMPORTANT)
+    - task: SSH@0
+      displayName: Test SSH Connection
+      inputs:
+        sshEndpoint: 'vm-ssh-connection'
+        runOptions: 'inline'
+        commands: |
+          whoami
+          hostname
+          ls -la /home/surendraadmin
+
+    # 🔹 1️⃣ Download WAR artifact
     - task: DownloadBuildArtifacts@0
+      displayName: Download WAR Artifact
       inputs:
         buildType: 'current'
         artifactName: 'java-war'
         downloadPath: '$(Pipeline.Workspace)'
-      displayName: Download WAR Artifact
 
-    # 7️⃣ Copy WAR to VM
+    # 🔹 2️⃣ Copy WAR to VM
     - task: CopyFilesOverSSH@0
-      inputs:
-        sshEndpoint: 'vm-ssh-connection'  # Make sure your service connection exists and authorized
-        sourceFolder: '$(Pipeline.Workspace)/java-war'
-        contents: '*.war'
-        targetFolder: '/home/$(VM_USER)'
       displayName: Copy WAR to VM
-
-    # 8️⃣ Deploy + Restart Tomcat
-    - task: SSH@0
       inputs:
         sshEndpoint: 'vm-ssh-connection'
-        runOptions: 'commands'
+        sourceFolder: '$(Pipeline.Workspace)/java-war'
+        contents: '*.war'
+        targetFolder: '/home/surendraadmin'
+
+    # 🔹 3️⃣ Deploy WAR + Restart Tomcat
+    - task: SSH@0
+      displayName: Deploy & Restart Tomcat
+      inputs:
+        sshEndpoint: 'vm-ssh-connection'
+        runOptions: 'inline'
         commands: |
-          sudo cp /home/$(VM_USER)/*.war $(TOMCAT_PATH)/webapps/JavaLoginShowcase.war
-          sudo $(TOMCAT_PATH)/bin/shutdown.sh || true
-          sudo $(TOMCAT_PATH)/bin/startup.sh
-      displayName: Restart Tomcat
+          sudo cp /home/surendraadmin/*.war /opt/tomcat/webapps/JavaLoginShowcase.war
+          sudo /opt/tomcat/bin/shutdown.sh || true
+          sudo /opt/tomcat/bin/startup.sh
