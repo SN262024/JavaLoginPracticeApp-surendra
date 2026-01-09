@@ -46,7 +46,6 @@ stages:
         publishLocation: 'Container'
 
 
-# =========================
 # STAGE 2 : DEPLOY
 # =========================
 - stage: Deploy
@@ -57,21 +56,25 @@ stages:
     displayName: Deploy WAR Locally
     steps:
 
+    # 5. Download Artifact
     - task: DownloadBuildArtifacts@0
       inputs:
         buildType: 'current'
         artifactName: 'java-war'
         downloadPath: '$(Pipeline.Workspace)'
+      displayName: Download Artifact
 
+    # 6. Copy to VM
+    - script: |
+        echo "Copying WAR to VM"
+        sudo cp $(Pipeline.Workspace)/java-war/*.war $(TOMCAT_PATH)/webapps/$(APP_NAME).war
+      displayName: Copy to VM
+
+    # 7. Copy to Webapps (Start Tomcat)
     - script: |
         echo "Stopping Tomcat"
         sudo $(TOMCAT_PATH)/bin/shutdown.sh || true
         sleep 5
-
-        echo "Deploying WAR"
-        sudo cp $(Pipeline.Workspace)/java-war/*.war \
-          $(TOMCAT_PATH)/webapps/$(APP_NAME).war
-
         echo "Starting Tomcat"
         sudo $(TOMCAT_PATH)/bin/startup.sh
-      displayName: Deploy & Restart Tomcat
+      displayName: Copy to Webapps
