@@ -2,11 +2,12 @@ trigger:
 - main
 
 pool:
-  name: Default
+  name: Default  # Tumhara self-hosted agent pool
 
 variables:
   VM_USER: "surendraadmin"
   TOMCAT_PATH: "/opt/tomcat"
+  JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"  # Java 17 path on VM
 
 # =========================
 # STAGE 1 : BUILD
@@ -22,17 +23,17 @@ stages:
     # 1️⃣ Checkout code
     - checkout: self
 
-    # 2️⃣ Java install
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '17'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
+    # 2️⃣ Verify Java
+    - script: |
+        java -version
+        echo "JAVA_HOME is set to $(JAVA_HOME)"
+      displayName: Verify Java
 
-    # 3️⃣ Maven install
+    # 3️⃣ Install Maven (if not installed)
     - script: |
         sudo apt update
         sudo apt install -y maven
+        mvn -version
       displayName: Install Maven
 
     # 4️⃣ Build WAR
@@ -47,7 +48,6 @@ stages:
         artifactName: 'java-war'
         publishLocation: 'Container'
       displayName: Publish WAR Artifact
-
 
 # =========================
 # STAGE 2 : DEPLOY
@@ -71,7 +71,7 @@ stages:
     # 7️⃣ Copy WAR to VM
     - task: CopyFilesOverSSH@0
       inputs:
-        sshEndpoint: 'vm-ssh-connection'
+        sshEndpoint: 'vm-ssh-connection'  # Make sure your service connection exists and authorized
         sourceFolder: '$(Pipeline.Workspace)/java-war'
         contents: '*.war'
         targetFolder: '/home/$(VM_USER)'
