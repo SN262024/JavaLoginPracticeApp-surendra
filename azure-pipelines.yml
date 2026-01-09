@@ -69,10 +69,11 @@ stages:
       inputs:
         sshEndpoint: 'vm-ssh-connection'
         runOptions: 'inline'
-        commands: |
+        inline: |
           whoami
           hostname
           ls -la /home/surendraadmin
+
 
     # 🔹 1️⃣ Download WAR artifact
     - task: DownloadBuildArtifacts@0
