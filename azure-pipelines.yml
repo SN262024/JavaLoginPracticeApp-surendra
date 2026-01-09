@@ -8,30 +8,32 @@ variables:
   VM_USER: "surendraadmin"
   TOMCAT_PATH: "/opt/tomcat"
   JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"  # Java 17 path on VM
-
-# =========================
-# STAGE 1 : BUILD
-# =========================
+  
 stages:
 - stage: Build
   displayName: Build Java Application
   jobs:
   - job: BuildJob
     displayName: Maven Build
+    pool:
+      name: Default
     steps:
 
     # 1️⃣ Checkout code
     - checkout: self
 
-    # 2️⃣ Verify Java
-    - script: |
-        java -version
-        echo "JAVA_HOME is set to $(JAVA_HOME)"
-      displayName: Verify Java
-
-    # 3️⃣ Install Maven (if not installed)
+    # 2️⃣ Install Java 17 if missing & set JAVA_HOME
     - script: |
         sudo apt update
+        sudo apt install -y openjdk-17-jdk
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+        export PATH=$JAVA_HOME/bin:$PATH
+        java -version
+        javac -version
+      displayName: Install Java 17 & Set JAVA_HOME
+
+    # 3️⃣ Maven install
+    - script: |
         sudo apt install -y maven
         mvn -version
       displayName: Install Maven
@@ -48,6 +50,7 @@ stages:
         artifactName: 'java-war'
         publishLocation: 'Container'
       displayName: Publish WAR Artifact
+
 
 # =========================
 # STAGE 2 : DEPLOY
