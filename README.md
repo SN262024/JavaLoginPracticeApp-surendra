@@ -76,3 +76,140 @@ This project is licensed under the Apache License - see the [LICENSE](LICENSE) f
 - **🧩**: Indicates Git.
 - **🤝**: Encourages contributions.
 - **📜**: Represents licensing.
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+
+# 🚀 Java Login App CI/CD Pipeline
+
+This repository demonstrates a complete CI/CD pipeline for a Java web application using Azure DevOps. The pipeline builds the application using Maven, publishes the WAR artifact, and deploys it to an Apache Tomcat server on a Linux VM.
+
+---
+
+## 📌 Overview
+
+The pipeline is divided into two main stages:
+
+1. **Build Stage (CI)** → Compile and package the Java application using Maven  
+2. **Deploy Stage (CD)** → Deploy the WAR file to Apache Tomcat  
+
+---
+
+## 📁 Project Structure
+
+```
+JavaLoginPracticeApp-surendra/
+│
+├── src/main/webapp/        # Java web application source
+├── pom.xml                 # Maven build configuration
+├── azure-pipelines.yml     # CI/CD pipeline definition
+├── README.md               # Documentation
+└── LICENSE
+```
+
+---
+
+## ⚙️ Pipeline Configuration
+
+- **Trigger:** On push to `main` branch  
+- **Agent Pool:** Self-hosted (`Default`)  
+- **Java Version:** OpenJDK 17  
+- **Build Tool:** Maven  
+
+---
+
+## 🧱 Build Stage (CI)
+
+### 🔹 Steps:
+
+1. Install Java 17  
+```bash
+sudo apt update
+sudo apt install -y openjdk-17-jdk
+```
+
+2. Set JAVA_HOME  
+```bash
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+```
+
+3. Build using Maven  
+```bash
+mvn clean package
+```
+
+4. Publish WAR artifact  
+- Output folder: `target/`  
+- Artifact name: `java-war`  
+
+---
+
+## 🚀 Deploy Stage (CD)
+
+### 🔹 Steps:
+
+1. Download build artifact  
+2. Copy WAR file to Tomcat webapps directory  
+3. Restart Tomcat server  
+
+---
+
+## 🖥️ Deployment Details
+
+- Tomcat Path:
+```
+/opt/tomcat
+```
+
+- Deployment Location:
+```
+/opt/tomcat/webapps/JavaLoginShowcase.war
+```
+
+---
+
+## 🔐 Tools & Technologies
+
+- Azure DevOps Pipelines  
+- Maven  
+- Java (OpenJDK 17)  
+- Apache Tomcat  
+- Linux VM  
+
+---
+
+## 🔄 Deployment Flow
+
+```
+Code → Maven Build → WAR → Artifact → Tomcat → Web App Live
+```
+
+---
+
+## 🎯 Use Case
+
+- Automating Java application deployment  
+- CI/CD implementation using Azure DevOps  
+- Deploying WAR file to Tomcat  
+- Real-world DevOps pipeline for Java apps  
+
+---
+
+## 💡 Key Learnings
+
+- CI/CD pipeline for Java applications  
+- Artifact management in Azure DevOps  
+- Deployment to Tomcat server  
+- Service restart automation  
+
+---
+
+## 🚀 Future Enhancements
+
+- Add rollback mechanism  
+- Add multi-environment deployment (Dev/Prod)  
+- Integrate monitoring (Prometheus/Grafana)  
+- Use Docker for containerized deployment  
+
+---
+
+🔥 *End-to-end Java application deployment using CI/CD pipeline*
